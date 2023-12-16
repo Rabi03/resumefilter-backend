@@ -193,6 +193,7 @@ export const uploadResume = (req: any, res: Response) => {
 
     file.mv(path, (err: any, result: any) => {
         if (err) {
+            console.log(err)
             return res.status(200).json({
                 error: true,
                 message: "Can not upload File"
