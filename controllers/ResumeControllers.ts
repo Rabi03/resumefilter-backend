@@ -1,6 +1,6 @@
 import { NextFunction, Response, Request } from "express";
 import path from 'path'
-import pdfjs from "pdf-parse";
+import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 import fs from 'fs'
 import { OpenAI } from 'openai'
 import natural from 'natural'
@@ -46,7 +46,7 @@ async function extractInformation(type: string, resumeText: string) {
 
         // Extract relevant information from GPT response
         const extractedInformation = JSON.parse(gptResponse.choices[0].text);
-
+       
         return extractedInformation;
     } catch (error) {
         console.error('Error:', error);
@@ -56,15 +56,15 @@ async function extractInformation(type: string, resumeText: string) {
 
 async function extractTextFromPDF(pdfPath: string) {
     try {
-        const pdfBuffer = await fs.promises.readFile(pdfPath);
+        const loader = new PDFLoader(pdfPath, {
+            splitPages: false,
+            parsedItemSeparator: " ",
+          });
 
-        return pdfjs(pdfBuffer).then(function (data: { numpages: any; numrender: any; info: any; metadata: any; version: any; text: any; }) {
+        const docs = await loader.load();
 
-
-
-            return extractInformation("resume", data.text);
-
-        });
+        
+        return extractInformation("resume", docs.map(doc=>doc.pageContent).join("\n"));
 
 
 
@@ -78,7 +78,7 @@ async function extractTextFromPDF(pdfPath: string) {
 async function processPDFsInDirectory(directoryPath: string) {
     try {
         const files = await fs.promises.readdir(directoryPath);
-        const result = [];
+        const result:any = [];
         for (const file of files) {
             const filePath = path.join(directoryPath, file);
 
@@ -126,11 +126,11 @@ function calculateExperienceScore(job: string, resume: string) {
 }
 
 
-function calculateJaccardSimilarity(set1:any, set2:any) {
+function calculateJaccardSimilarity(set1: any, set2: any) {
     const intersection = new Set([...set1].filter(x => set2.has(x)));
     const union = new Set([...set1, ...set2]);
     return intersection.size / union.size;
-  }
+}
 
 
 
@@ -149,21 +149,21 @@ const filterResume = (jobdescription: Job, resumes: Job[] | undefined) => {
         education_tfidf.addDocument(preprocessAndStem(resume.education))
     })
 
-    const tfidfForJobposition=posiion_tfidf.tfidfs(preprocessAndStem(jobdescription.job_position));
-    const tfidfForJobskill=skill_tfidf.tfidfs(preprocessAndStem(jobdescription.skills));
-    const tfidfForJobeducation=education_tfidf.tfidfs(preprocessAndStem(jobdescription.education));
+    const tfidfForJobposition = posiion_tfidf.tfidfs(preprocessAndStem(jobdescription.job_position));
+    const tfidfForJobskill = skill_tfidf.tfidfs(preprocessAndStem(jobdescription.skills));
+    const tfidfForJobeducation = education_tfidf.tfidfs(preprocessAndStem(jobdescription.education));
 
 
 
     resumes?.forEach(resume => {
         const positionTFIDF = posiion_tfidf.tfidfs(preprocessAndStem(resume.job_position))
-        const skillsTFIDF  = skill_tfidf.tfidfs(preprocessAndStem(resume.skills))
+        const skillsTFIDF = skill_tfidf.tfidfs(preprocessAndStem(resume.skills))
         const experience_score = calculateExperienceScore(jobdescription.work_experience, resume.work_experience)
         const educationTFIDF = education_tfidf.tfidfs(preprocessAndStem(resume.education))
 
-        const position_score=calculateJaccardSimilarity(new Set(tfidfForJobposition), new Set(positionTFIDF));
-        const skill_score=calculateJaccardSimilarity(new Set(tfidfForJobskill), new Set(skillsTFIDF));
-        const education_score=calculateJaccardSimilarity(new Set(tfidfForJobeducation), new Set(educationTFIDF));
+        const position_score = calculateJaccardSimilarity(new Set(tfidfForJobposition), new Set(positionTFIDF));
+        const skill_score = calculateJaccardSimilarity(new Set(tfidfForJobskill), new Set(skillsTFIDF));
+        const education_score = calculateJaccardSimilarity(new Set(tfidfForJobeducation), new Set(educationTFIDF));
         filteredResumes.push({
             file: resume.file,
             score: position_score * 4 + skill_score * 5 + experience_score * 3 + education_score * 2,
@@ -181,7 +181,7 @@ const filterResume = (jobdescription: Job, resumes: Job[] | undefined) => {
 
 }
 
-export const uploadResume= (req: any, res: Response) => {
+export const uploadResume = (req: any, res: Response) => {
     console.log(req)
     let file = req.files.file;
     let date = new Date();
@@ -191,17 +191,17 @@ export const uploadResume= (req: any, res: Response) => {
     let path = 'public/resume/' + filename;
 
 
-    file.mv(path, (err:any, result:any) => {
+    file.mv(path, (err: any, result: any) => {
         if (err) {
             return res.status(200).json({
-                error:true,
-                message:"Can not upload File"
+                error: true,
+                message: "Can not upload File"
             })
         } else {
 
             return res.status(200).json({
-                error:false,
-                message:"File uploaded successfully"
+                error: false,
+                message: "File uploaded successfully"
             })
         }
     })
