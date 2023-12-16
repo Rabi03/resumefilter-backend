@@ -6,6 +6,7 @@ import fileUpload from 'express-fileupload';
 dotenv.config()
 
 import Resume from './routes/Resume';
+import path from 'path';
 
 
 process.on('uncaughtException', err => {
@@ -23,7 +24,7 @@ process.on('uncaughtException', err => {
     })
   );
   app.use(express.json())
-  app.use(express.static('public'));
+  app.use(express.static(path.join(__dirname, 'public')));
   app.use(express.urlencoded({ extended: true }))
   app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 },
