@@ -1,12 +1,12 @@
-import express,{Express,Request,Response} from 'express';
-import cors from "cors";
-import dotenv from 'dotenv';
-import fileUpload from 'express-fileupload';
+const express = require('express');
+const cors = require("cors");
+const dotenv = require('dotenv');
+const fileUpload = require('express-fileupload');
  
 dotenv.config()
 
-import Resume from './routes/Resume';
-import path from 'path';
+const Resume = require('./routes/Resume');
+const path = require('path');
 
 
 process.on('uncaughtException', err => {
@@ -16,7 +16,7 @@ process.on('uncaughtException', err => {
   })
   
 
-  const app:Express = express();
+  const app = express();
   app.use(
     cors({
       origin: true,
@@ -32,7 +32,7 @@ process.on('uncaughtException', err => {
 
   
   
-  app.get("/", (req:Request, res:Response) => {
+  app.get("/", (req, res) => {
     res.status(200).json({
       status: "success",
       ipAddress: req.ip,

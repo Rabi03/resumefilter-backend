@@ -1,9 +1,8 @@
-import { NextFunction, Response, Request } from "express";
-import path from 'path'
-import { PDFLoader } from "langchain/document_loaders/fs/pdf";
-import fs from 'fs'
-import { OpenAI } from 'openai'
-import natural from 'natural'
+const path = require('path')
+const { PDFLoader } = require("langchain/document_loaders/fs/pdf");
+const fs = require('fs')
+const { OpenAI } = require('openai')
+const natural = require('natural')
 
 const TfIdf = natural.TfIdf;
 const PorterStemmer = natural.PorterStemmer;
@@ -12,30 +11,11 @@ const posiion_tfidf = new TfIdf();
 const skill_tfidf = new TfIdf();
 const education_tfidf = new TfIdf();
 
-interface GetResume {
-    jobDescription?: string
-}
 
-interface Job {
-    file?: string
-    job_position: string
-    skills: string
-    work_experience: string
-    education: any
-}
-
-interface Filter {
-    file: string | undefined
-    score: number
-    job_score: number
-    skill_score: number
-    experience_score: number
-    education_score: number
-}
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
 
-async function extractInformation(type: string, resumeText: string) {
+async function extractInformation(type, resumeText) {
     try {
         const gptResponse = await openai.completions.create({
             prompt: `Extract job position (Field:job_position), skills (Field: skills), years of work experience (Field: work_experience), education (Field: education) from the following ${type} and show result in json format and use those fields name as key and type of value will be string:\n\n${resumeText}\n\n`,
@@ -54,7 +34,7 @@ async function extractInformation(type: string, resumeText: string) {
     }
 }
 
-async function extractTextFromPDF(pdfPath: string) {
+async function extractTextFromPDF(pdfPath) {
     try {
         const loader = new PDFLoader(pdfPath, {
             splitPages: false,
@@ -75,10 +55,10 @@ async function extractTextFromPDF(pdfPath: string) {
 }
 
 // Function to process all PDFs in a directory
-async function processPDFsInDirectory(directoryPath: string) {
+async function processPDFsInDirectory(directoryPath) {
     try {
         const files = await fs.promises.readdir(directoryPath);
-        const result:any = [];
+        const result = [];
         for (const file of files) {
             const filePath = path.join(directoryPath, file);
 
@@ -98,7 +78,7 @@ async function processPDFsInDirectory(directoryPath: string) {
     }
 }
 
-function preprocessAndStem(document: string) {
+function preprocessAndStem(document) {
     return document.toLowerCase().split(/\s+/).map(PorterStemmer.stem);
 }
 
@@ -106,15 +86,15 @@ function preprocessAndStem(document: string) {
 
 
 
-function parseExperience(experience: string) {
+function parseExperience(experience) {
     const match = experience.toString().match(/(\d+) years/);
     return match ? parseInt(match[1], 10) : 0;
 }
 
 
-function calculateExperienceScore(job: string, resume: string) {
-    const j: number = parseExperience(job)
-    const r: number = parseExperience(resume)
+function calculateExperienceScore(job, resume) {
+    const j= parseExperience(job)
+    const r = parseExperience(resume)
 
     if (r && j) {
         if (r >= j) return 1
@@ -126,7 +106,7 @@ function calculateExperienceScore(job: string, resume: string) {
 }
 
 
-function calculateJaccardSimilarity(set1: any, set2: any) {
+function calculateJaccardSimilarity(set1, set2) {
     const intersection = new Set([...set1].filter(x => set2.has(x)));
     const union = new Set([...set1, ...set2]);
     return intersection.size / union.size;
@@ -135,9 +115,9 @@ function calculateJaccardSimilarity(set1: any, set2: any) {
 
 
 
-const filterResume = (jobdescription: Job, resumes: Job[] | undefined) => {
+const filterResume = (jobdescription, resumes) => {
 
-    const filteredResumes: Filter[] = []
+    const filteredResumes = []
 
     posiion_tfidf.addDocument(preprocessAndStem(jobdescription.job_position))
     skill_tfidf.addDocument(preprocessAndStem(jobdescription.skills))
@@ -181,7 +161,7 @@ const filterResume = (jobdescription: Job, resumes: Job[] | undefined) => {
 
 }
 
-export const uploadResume = (req: any, res: Response) => {
+exports.uploadResume = (req, res) => {
     console.log(req)
     let file = req.files.file;
     let date = new Date();
@@ -191,7 +171,7 @@ export const uploadResume = (req: any, res: Response) => {
     let fpath = path.join(__dirname, 'public/resume/' + filename);
 
 
-    file.mv(fpath, (err: any, result: any) => {
+    file.mv(fpath, (err, result) => {
         if (err) {
             console.log(err)
             return res.status(200).json({
@@ -209,15 +189,15 @@ export const uploadResume = (req: any, res: Response) => {
 }
 
 
-export const resumeFinder = async (req: Request, res: Response, next: NextFunction) => {
-    const { jobDescription }: GetResume = req.body as GetResume;
+exports.resumeFinder = async (req, res, next) => {
+    const { jobDescription } = req.body;
 
     if (jobDescription) {
         try {
 
 
-            const jobdata: Job = await extractInformation("Job Description", jobDescription);
-            const resumedata: Job[] | undefined = await processPDFsInDirectory("public/resume/");
+            const jobdata = await extractInformation("Job Description", jobDescription);
+            const resumedata= await processPDFsInDirectory("public/resume/");
 
             const filteredResumes = filterResume(jobdata, resumedata);
 
