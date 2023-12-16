@@ -188,10 +188,10 @@ export const uploadResume = (req: any, res: Response) => {
 
     let filename = date.getDate() + date.getTime() + file.name;
 
-    let path = 'public/resume/' + filename;
+    let fpath = path.join(__dirname, 'public/resume/' + filename);
 
 
-    file.mv(path, (err: any, result: any) => {
+    file.mv(fpath, (err: any, result: any) => {
         if (err) {
             console.log(err)
             return res.status(200).json({
